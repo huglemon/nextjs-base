@@ -13,8 +13,9 @@ import { FaGithub } from 'react-icons/fa';
 import { checkAndInitUserAction } from '@/app/(client)/actions/auth';
 import { authClient } from '@/lib/auth/auth-client';
 import Link from 'next/link';
+import nb from '@/lib/function';
 
-export function LoginForm({ className, callbackUrl, ...props }) {
+export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClientID, ...props }) {
 	const t = useTranslations();
 	const locale = useLocale();
 	const router = useRouter();
@@ -22,6 +23,9 @@ export function LoginForm({ className, callbackUrl, ...props }) {
 	const [error, setError] = useState('');
 	const hasHandledSessionRef = useRef(false);
 	const { data: session } = authClient.useSession();
+
+	const OAuthState = nb.pubfn.isNullAll(GoogleClientID, GitHubClientID);
+	const OAuthGrids = nb.pubfn.isNullOne(GoogleClientID, GitHubClientID) ? 1 : 2;
 
 	// 格式化跳转路径，默认加上当前语言前缀
 	const formatRedirectPath = useCallback(
@@ -37,11 +41,11 @@ export function LoginForm({ className, callbackUrl, ...props }) {
 		[locale]
 	);
 
-	// 获取登录后的重定向地址，默认为 admin
+	// 获取登录后的重定向地址，默认为 dashboard
 	const getRedirectUrl = useCallback(() => {
 		const safeCallback = formatRedirectPath(callbackUrl);
 		if (safeCallback) return safeCallback;
-		return `/admin`;
+		return `/dashboard`;
 	}, [callbackUrl, formatRedirectPath, locale]);
 
 	// 检查是否有 session（三方登录回调后）并初始化用户
@@ -108,14 +112,14 @@ export function LoginForm({ className, callbackUrl, ...props }) {
 		try {
 			setIsLoading(true);
 			setError('');
-			
+
 			// 使用 authClient 的方法进行 Google 登录
 			// 注意：三方登录的回调URL需要包含完整的路径（包括 callbackUrl 参数）
 			// 将 callbackUrl 编码后附加到登录页URL，这样回调后还能获取到
-			const loginUrl = callbackUrl 
+			const loginUrl = callbackUrl
 				? `${window.location.pathname}?callbackUrl=${encodeURIComponent(callbackUrl)}`
 				: window.location.pathname;
-			
+
 			await authClient.signIn.social({
 				provider: 'google',
 				callbackURL: loginUrl,
@@ -132,13 +136,13 @@ export function LoginForm({ className, callbackUrl, ...props }) {
 		try {
 			setIsLoading(true);
 			setError('');
-			
+
 			// 使用 authClient 的方法进行 GitHub 登录
 			// 注意：三方登录的回调URL需要包含完整的路径（包括 callbackUrl 参数）
-			const loginUrl = callbackUrl 
+			const loginUrl = callbackUrl
 				? `${window.location.pathname}?callbackUrl=${encodeURIComponent(callbackUrl)}`
 				: window.location.pathname;
-			
+
 			await authClient.signIn.social({
 				provider: 'github',
 				callbackURL: loginUrl,
@@ -202,29 +206,42 @@ export function LoginForm({ className, callbackUrl, ...props }) {
 										{isLoading ? t('common.loading') : t('auth.login')}
 									</Button>
 								</Field>
-								<FieldSeparator className='*:data-[slot=field-separator-content]:bg-card'>
-									{t('auth.orContinueWith')}
-								</FieldSeparator>
-								<Field className='grid grid-cols-2 gap-4'>
-									<Button
-										variant='outline'
-										type='button'
-										onClick={handleGoogleLogin}
-										disabled={isLoading}
-									>
-										<FcGoogle />
-										<span>{t('auth.continueWithGoogle')}</span>
-									</Button>
-									<Button
-										variant='outline'
-										type='button'
-										onClick={handleGithubLogin}
-										disabled={isLoading}
-									>
-										<FaGithub />
-										<span>{t('auth.continueWithGithub')}</span>
-									</Button>
-								</Field>
+								{
+									!OAuthState &&
+									(<><FieldSeparator className='*:data-[slot=field-separator-content]:bg-card'>
+										{t('auth.orContinueWith')}
+									</FieldSeparator>
+										<Field className={`grid grid-cols-${OAuthGrids} gap-4`}>
+											{
+												GoogleClientID && (
+													<Button
+														variant='outline'
+														type='button'
+														onClick={handleGoogleLogin}
+														disabled={isLoading}
+													>
+														<FcGoogle />
+														<span>{t('auth.continueWithGoogle')}</span>
+													</Button>
+												)
+											}
+											{
+												GitHubClientID && (
+													<Button
+														variant='outline'
+														type='button'
+														onClick={handleGithubLogin}
+														disabled={isLoading}
+													>
+														<FaGithub />
+														<span>{t('auth.continueWithGithub')}</span>
+													</Button>
+												)
+											}
+
+										</Field></>)
+								}
+
 								<FieldDescription className='text-center'>
 									{/* 登录则自动创建账号提示 */}
 									<span>{t('auth.autoCreateAccount')}</span>

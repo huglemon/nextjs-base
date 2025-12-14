@@ -11,11 +11,13 @@ export default async function LoginPage({ searchParams }) {
 	// Next.js 16+ 中 searchParams 可能是 Promise，需要 await
 	const resolvedSearchParams = await searchParams;
 	const callbackUrl = resolvedSearchParams?.callbackUrl || null;
+	const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+	const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
 
 	return (
 		<div className='flex min-h-svh flex-col items-center justify-center p-6 md:p-10'>
 			<div className='w-full max-w-sm md:max-w-lg z-10'>
-				<LoginForm callbackUrl={callbackUrl} />
+				<LoginForm callbackUrl={callbackUrl} GoogleClientID={GOOGLE_CLIENT_ID} GitHubClientID={GITHUB_CLIENT_ID} />
 			</div>
 			<div className='absolute top-0 left-0 w-full h-full dark:bg-[#0f0f12]'>
 				<Prism
