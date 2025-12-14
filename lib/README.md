@@ -19,6 +19,10 @@ lib/
 │   ├── selects.js       # 万能连表查询工具
 │   └── README.md
 │
+├── cache/               # ⚡ 缓存管理 (db/redis)
+│   ├── cache-manager.js # CacheManage 适配 PostgreSQL & Redis
+│   └── README.md
+│
 ├── function/            # 🛠️ 通用工具函数（nb.pubfn）
 │   ├── index.js         # 工具函数入口（类型判断、数组、字符串、时间等）
 │   ├── treeUtil.js      # 树形结构工具
@@ -79,7 +83,17 @@ import { prisma } from '@/lib/database/prisma';
 
 // 万能连表查询
 import { selects, selectOne } from '@/lib/database/selects';
+
+// 缓存（默认 db，支持 redis，服务器端）
+import nb from '@/lib/nb';
+await nb.cache.set('demo', { value: 1 }, 60);
+await nb.cache.incr('counter', 120);
 ```
+
+## nb 引入方式（避免混淆）
+- `@/lib/function`：纯工具库入口（`nb.pubfn`），可在客户端组件使用，不包含 cache。
+- `@/lib/nb`：服务端入口，包含同样的工具集并额外注入 `cache/cacheManage`，仅服务器端使用。
+- 路径不同、命名空间独立，不会互相覆盖。按场景选择导入即可：客户端用 `@/lib/function`，服务端需要缓存时用 `@/lib/nb`。
 
 ### 通用工具函数
 
@@ -232,4 +246,3 @@ import { z } from '@/lib/validation';
   - 迁移所有文件到新目录结构
   - 更新所有导入路径（40+ 文件）
   - 创建各目录 README 文档
-

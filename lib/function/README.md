@@ -1,13 +1,5 @@
 # NB 公共函数库 (nb.pubfn)
 
-参考 [vk-unicloud 的 pubfn API](https://vkdoc.fsq.pub/client/jsapi.html#common) 设计，提供统一的工具函数库。
-
-> **注意**: 本工具库原本基于 MongoDB 设计（vk-unicloud），已适配 PostgreSQL/Prisma 环境。
-> 主要变更：
-> - `_id` → `id`（主键字段名）
-> - `parent_id` → `parentId`（父级字段名，遵循 Prisma 驼峰命名）
-> - 移除 MongoDB ObjectId 相关处理
-
 ## 使用方式
 
 ```javascript
@@ -17,6 +9,11 @@ import nb from '@/lib/function';
 nb.pubfn.isNull(value);
 nb.pubfn.timeFormat(new Date());
 nb.pubfn.tree.arrayToTree(list);
+
+// 缓存 (nb.cache) - 仅服务端，从 "@/lib/nb" 引入
+// import nb from '@/lib/nb';
+// await nb.cache.set('demo:key', { foo: 'bar' }, 60);
+// await nb.cache.get('demo:key');
 ```
 
 ---
@@ -1054,4 +1051,3 @@ const unique = [...new Set(arr)];
 ## 国际化支持
 
 > **提醒**：如需在 Next.js 中使用语言相关功能，建议使用 `next-intl` 库替代原来的 `getLocale` 等函数。
-

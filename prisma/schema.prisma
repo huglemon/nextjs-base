@@ -297,6 +297,24 @@ model ActionLog {
 }
 
 // ============================================
+// Cache 缓存管理
+// ============================================
+
+/// 通用缓存表 - 替代 vk-unicloud globalDataCache
+model CacheEntry {
+  key          String    @id                                   // 缓存键
+  value        Json?                                           // 缓存值（任意 JSON 类型）
+  numericValue Float?    @map("numeric_value")                 // 数值缓存，用于原子自增/自减
+  expiresAt    DateTime? @map("expires_at")                    // 过期时间（null 表示永不过期）
+  
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  @@index([expiresAt])
+  @@map("cache_entries")
+}
+
+// ============================================
 // CMS 内容管理
 // ============================================
 
