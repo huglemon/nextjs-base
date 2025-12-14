@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/database/prisma';
-import nb from '@/lib/function';
+import nb from '@/lib/nb';
+
+const MENU_CACHE_TTL_SECONDS = 600; // 10 minutes
 
 /**
  * SysDAO - 系统权限相关的数据访问对象
@@ -547,7 +549,23 @@ export async function getUserPermissionIds(userId) {
  */
 export async function getUserMenus(userId) {
 	const roleIds = await getUserRoleIds(userId);
-	return await getMenusByRoleIds(roleIds);
+	const roleKey = roleIds.slice().sort().join(',');
+
+	// 优先读取缓存（按用户+角色集区分，角色变化会生成新 key）
+	if (nb.cache) {
+		const cacheKey = `menus:user:${userId}:roles:${roleKey || 'none'}`;
+		const cached = await nb.cache.get(cacheKey);
+		if (cached && cached.roleKey === roleKey && cached.menus) {
+			return cached.menus;
+		}
+
+		const menus = await getMenusByRoleIds(roleIds);
+		await nb.cache.set(cacheKey, { roleKey, menus }, MENU_CACHE_TTL_SECONDS);
+		return menus;
+	}
+
+	// 无缓存配置时，直接查询
+	return getMenusByRoleIds(roleIds);
 }
 
 /**
