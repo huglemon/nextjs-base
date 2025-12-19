@@ -84,15 +84,24 @@
 		"orContinueWith": "Or continue with",
 		"continueWithGoogle": "Google",
 		"continueWithGithub": "GitHub",
+		"continueWithWechat": "WeChat",
 		"autoCreateAccount": "Automatically create an account if you first time login",
-		"termsAndPrivacy": "By signing in, you agree to our {terms} and {privacy}"
+		"termsAndPrivacy": "By signing in, you agree to our {terms} and {privacy}",
+		"wechatLogin": "WeChat QR Login",
+		"wechatLoginDesc": "Scan the QR code below with WeChat to login",
+		"wechatLoginTip": "Follow the official account to login automatically",
+		"qrcodeExpireIn": "QR code will expire in {time}",
+		"qrcodeExpired": "QR code expired",
+		"loginSuccess": "Login successful"
 	},
 	"common": {
 		"loading": "Loading...",
 		"error": "Error",
 		"success": "Success",
 		"warning": "Warning",
-		"info": "Info"
+		"info": "Info",
+		"refresh": "Refresh",
+		"retry": "Retry"
 	},
 	"validation": {
 		"emailRequired": "Email is required",

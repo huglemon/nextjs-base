@@ -9,13 +9,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldSeparator } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { FcGoogle } from 'react-icons/fc';
-import { FaGithub } from 'react-icons/fa';
+import { FaGithub, FaWeixin } from 'react-icons/fa';
 import { checkAndInitUserAction } from '@/app/(client)/actions/auth';
 import { authClient } from '@/lib/auth/auth-client';
 import Link from 'next/link';
 import nb from '@/lib/function';
+import { WechatLoginDialog } from '@/components/auth/wechat-login-dialog';
 
-export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClientID, ...props }) {
+export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClientID, WechatMPAppID, ...props }) {
 	const t = useTranslations();
 	const locale = useLocale();
 	const router = useRouter();
@@ -24,8 +25,9 @@ export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClient
 	const hasHandledSessionRef = useRef(false);
 	const { data: session } = authClient.useSession();
 
-	const OAuthState = nb.pubfn.isNullAll(GoogleClientID, GitHubClientID);
-	const OAuthGrids = nb.pubfn.isNullOne(GoogleClientID, GitHubClientID) ? 1 : 2;
+	// 计算 OAuth 提供商状态
+	const hasOAuth = !nb.pubfn.isNullAll(GoogleClientID, GitHubClientID, WechatMPAppID);
+	const oauthProviderCount = [GoogleClientID, GitHubClientID, WechatMPAppID].filter(Boolean).length;
 
 	// 格式化跳转路径，默认加上当前语言前缀
 	const formatRedirectPath = useCallback(
@@ -154,6 +156,13 @@ export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClient
 		}
 	};
 
+	// 微信扫码登录成功回调
+	const handleWechatLoginSuccess = async () => {
+		await checkAndInitUserAction();
+		hasHandledSessionRef.current = true;
+		router.push(getRedirectUrl());
+	};
+
 	return (
 		<div className={cn('flex flex-col gap-6 z-10', className)} {...props}>
 			{/* 毛玻璃背景 */}
@@ -206,41 +215,49 @@ export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClient
 										{isLoading ? t('common.loading') : t('auth.login')}
 									</Button>
 								</Field>
-								{
-									!OAuthState &&
-									(<><FieldSeparator className='*:data-[slot=field-separator-content]:bg-card'>
+								{hasOAuth && (
+								<>
+									<FieldSeparator className='*:data-[slot=field-separator-content]:bg-card'>
 										{t('auth.orContinueWith')}
 									</FieldSeparator>
-										<Field className={`grid grid-cols-${OAuthGrids} gap-4`}>
-											{
-												GoogleClientID && (
-													<Button
-														variant='outline'
-														type='button'
-														onClick={handleGoogleLogin}
-														disabled={isLoading}
-													>
-														<FcGoogle />
-														<span>{t('auth.continueWithGoogle')}</span>
+									<Field className={`grid grid-cols-${oauthProviderCount} gap-4`}>
+										{GoogleClientID && (
+											<Button
+												variant='outline'
+												type='button'
+												onClick={handleGoogleLogin}
+												disabled={isLoading}
+											>
+												<FcGoogle />
+												<span className={oauthProviderCount > 2 ? 'sr-only' : ''}>{t('auth.continueWithGoogle')}</span>
+											</Button>
+										)}
+										{GitHubClientID && (
+											<Button
+												variant='outline'
+												type='button'
+												onClick={handleGithubLogin}
+												disabled={isLoading}
+											>
+												<FaGithub />
+												<span className={oauthProviderCount > 2 ? 'sr-only' : ''}>{t('auth.continueWithGithub')}</span>
+											</Button>
+										)}
+										{WechatMPAppID && (
+											<WechatLoginDialog
+												onSuccess={handleWechatLoginSuccess}
+												disabled={isLoading}
+												trigger={
+													<Button variant='outline' type='button' disabled={isLoading}>
+														<FaWeixin className='text-green-500' />
+														<span className={oauthProviderCount > 2 ? 'sr-only' : ''}>{t('auth.continueWithWechat')}</span>
 													</Button>
-												)
-											}
-											{
-												GitHubClientID && (
-													<Button
-														variant='outline'
-														type='button'
-														onClick={handleGithubLogin}
-														disabled={isLoading}
-													>
-														<FaGithub />
-														<span>{t('auth.continueWithGithub')}</span>
-													</Button>
-												)
-											}
-
-										</Field></>)
-								}
+												}
+											/>
+										)}
+									</Field>
+								</>
+							)}
 
 								<FieldDescription className='text-center'>
 									{/* 登录则自动创建账号提示 */}

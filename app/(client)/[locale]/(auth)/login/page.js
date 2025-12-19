@@ -13,11 +13,17 @@ export default async function LoginPage({ searchParams }) {
 	const callbackUrl = resolvedSearchParams?.callbackUrl || null;
 	const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 	const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
+	const WECHAT_MP_APPID = process.env.WECHAT_MP_APPID || '';
 
 	return (
 		<div className='flex min-h-svh flex-col items-center justify-center p-6 md:p-10'>
 			<div className='w-full max-w-sm md:max-w-lg z-10'>
-				<LoginForm callbackUrl={callbackUrl} GoogleClientID={GOOGLE_CLIENT_ID} GitHubClientID={GITHUB_CLIENT_ID} />
+				<LoginForm 
+					callbackUrl={callbackUrl} 
+					GoogleClientID={GOOGLE_CLIENT_ID} 
+					GitHubClientID={GITHUB_CLIENT_ID}
+					WechatMPAppID={WECHAT_MP_APPID}
+				/>
 			</div>
 			<div className='absolute top-0 left-0 w-full h-full dark:bg-[#0f0f12]'>
 				<Prism

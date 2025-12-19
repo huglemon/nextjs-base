@@ -84,15 +84,24 @@
 		"orContinueWith": "或使用以下方式继续",
 		"continueWithGoogle": "Google",
 		"continueWithGithub": "GitHub",
+		"continueWithWechat": "微信",
 		"autoCreateAccount": "首次登录将自动创建账户",
-		"termsAndPrivacy": "登录即表示您同意我们的{terms}和{privacy}"
+		"termsAndPrivacy": "登录即表示您同意我们的{terms}和{privacy}",
+		"wechatLogin": "微信扫码登录",
+		"wechatLoginDesc": "请使用微信扫描下方二维码登录",
+		"wechatLoginTip": "扫码关注公众号后即可自动登录",
+		"qrcodeExpireIn": "二维码将在 {time} 后过期",
+		"qrcodeExpired": "二维码已过期",
+		"loginSuccess": "登录成功"
 	},
 	"common": {
 		"loading": "加载中...",
 		"error": "错误",
 		"success": "成功",
 		"warning": "警告",
-		"info": "提示"
+		"info": "提示",
+		"refresh": "刷新",
+		"retry": "重试"
 	},
 	"validation": {
 		"emailRequired": "请输入邮箱",
