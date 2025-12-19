@@ -11,7 +11,6 @@ import * as Icons from '@ant-design/icons';
 import { UserOutlined, HomeOutlined, LogoutOutlined, LinkOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { signOutAction } from '@/app/(client)/actions/auth';
 import { getUserAccessibleMenusAction } from '@/app/(admin)/actions/rbac/user-permissions';
 import PageAccessGuard from './page-access-guard';
 import { authClient } from '@/lib/auth/auth-client';
@@ -60,10 +59,16 @@ export default function AdminLayout({ children, user }) {
 		loadMenus();
 	}, []);
 
-	// 登出处理函数
+	// 登出处理函数 - 使用客户端 signOut 同时清除客户端和服务端 session
 	const handleLogout = async () => {
-		const result = await signOutAction();
-		if (result.success) {
+		try {
+			// 使用 authClient.signOut() 同时清除客户端缓存和服务端 session
+			// 这样可以避免退出后因客户端缓存导致的重复跳转问题
+			await authClient.signOut();
+			router.push('/en/login');
+		} catch (error) {
+			console.error('Logout error:', error);
+			// 即使出错也尝试跳转到登录页
 			router.push('/en/login');
 		}
 	};

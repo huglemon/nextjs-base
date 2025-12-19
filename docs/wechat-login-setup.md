@@ -314,6 +314,172 @@ const bindResult = await authClient.bindWechat({
 const unbindResult = await authClient.unbindWechat();
 ```
 
+## 用户管理与账户关联
+
+### 管理员后台用户管理
+
+用户通过微信扫码登录后，管理员可以在后台对用户进行以下操作：
+
+#### 1. 设置用户名（Username）
+
+微信登录的用户默认没有用户名，管理员可以在后台为用户设置用户名：
+
+- **操作位置**：管理后台 > 用户管理 > 编辑用户
+- **功能说明**：设置用户名后，用户可以使用 `用户名 + 密码` 的方式登录
+- **注意事项**：
+  - 用户名需要唯一
+  - 建议使用有意义的用户名，便于识别和管理
+
+#### 2. 重置密码
+
+为微信登录的用户设置密码，使其可以使用账号密码登录：
+
+- **操作位置**：管理后台 > 用户管理 > 重置密码
+- **功能说明**：
+  - 管理员可以为用户设置初始密码
+  - 用户首次使用密码登录后，建议修改密码
+- **使用场景**：
+  - 用户忘记微信账号，可以通过用户名/邮箱 + 密码登录
+  - 用户希望使用传统账号密码方式登录
+
+#### 3. 用户信息管理
+
+管理员可以查看和管理微信登录用户的信息：
+
+- **查看用户信息**：包括用户ID、邮箱（占位邮箱）、创建时间、最后登录时间等
+- **查看登录方式**：在账户关联列表中可以看到用户的微信绑定信息
+- **编辑用户资料**：修改用户昵称、头像等基本信息
+
+### 多登录方式支持
+
+用户完成微信扫码登录后，系统支持以下登录方式：
+
+#### 方式一：微信扫码登录（原有方式）
+
+用户继续使用微信扫码登录，流程不变：
+
+1. 点击"微信登录"按钮
+2. 扫描二维码
+3. 关注公众号（首次）或直接扫码
+4. 自动登录成功
+
+#### 方式二：账号密码登录（管理员设置后）
+
+管理员为用户设置用户名和密码后，用户可以使用：
+
+1. **用户名 + 密码**：使用管理员设置的用户名和密码登录
+2. **邮箱 + 密码**：使用占位邮箱（格式：`{openid}@wechat.placeholder`）和密码登录
+
+> 💡 **提示**：微信登录用户的邮箱是占位邮箱，主要用于系统内部标识，不建议用户使用此邮箱进行密码登录。建议管理员为用户设置用户名，使用用户名登录更友好。
+
+### 账户关联与绑定
+
+#### 自动关联
+
+微信扫码登录时，系统会自动：
+
+1. **新用户**：创建新用户账户，并创建微信账户关联记录
+2. **已存在用户**：如果微信已绑定，直接登录；如果未绑定，创建新的关联记录
+
+#### 手动绑定（API 开发）
+
+如果需要将微信账户绑定到现有账户，可以使用以下 API：
+
+##### 检查微信是否已绑定
+
+```javascript
+const { bound } = await authClient.checkWechatBinding({
+  unionid: 'xxx',
+});
+```
+
+##### 绑定微信到当前账户
+
+```javascript
+// 需要用户已登录（有会话）
+const result = await authClient.bindWechat({
+  unionid: 'xxx',
+  openid: 'xxx',
+});
+```
+
+##### 解绑微信
+
+```javascript
+// 需要用户已登录
+const result = await authClient.unbindWechat();
+```
+
+#### 自定义绑定流程
+
+如果需要实现更复杂的账户关联逻辑（例如：将微信绑定到已有邮箱账户），可以：
+
+1. **使用现有 API**：结合 `checkWechatBinding` 和 `bindWechat` API
+2. **自定义开发**：根据业务需求，开发自定义的账户关联接口
+3. **参考实现**：
+   - 检查目标账户是否存在
+   - 验证用户身份（如邮箱验证码）
+   - 调用 `bindWechat` API 完成绑定
+
+#### 绑定场景示例
+
+##### 场景一：用户已有邮箱账户，希望绑定微信
+
+```javascript
+// 1. 用户使用邮箱密码登录
+await authClient.signIn.email({
+  email: 'user@example.com',
+  password: 'password',
+});
+
+// 2. 用户扫码后获取 unionid/openid
+const { unionid, openid } = getWechatUserInfo();
+
+// 3. 检查微信是否已被绑定
+const { bound } = await authClient.checkWechatBinding({ unionid });
+
+if (!bound) {
+  // 4. 绑定微信到当前账户
+  await authClient.bindWechat({ unionid, openid });
+}
+```
+
+##### 场景二：用户先微信登录，后绑定邮箱
+
+```javascript
+// 1. 用户微信扫码登录
+await authClient.signInWechat({ unionid, openid });
+
+// 2. 用户设置邮箱和密码（使用 better-auth 的 changeEmail 和 changePassword）
+await authClient.changeEmail({
+  newEmail: 'user@example.com',
+});
+
+await authClient.changePassword({
+  currentPassword: '', // 微信用户没有密码，可能需要特殊处理
+  newPassword: 'newPassword',
+});
+```
+
+### 最佳实践建议
+
+1. **新用户流程**：
+   - 用户微信扫码登录 → 自动创建账户 → 管理员设置用户名和密码 → 用户可选择任意方式登录
+
+2. **账户安全**：
+   - 建议为微信登录用户设置强密码
+   - 定期检查账户关联情况
+   - 对于异常登录行为及时处理
+
+3. **用户体验**：
+   - 首次登录后引导用户完善资料（设置用户名、邮箱等）
+   - 提供多种登录方式选择，提升用户体验
+   - 在用户设置中显示已绑定的登录方式
+
+4. **数据一致性**：
+   - 确保用户无论使用哪种方式登录，都能访问相同的账户数据
+   - 账户关联信息统一存储在 `account` 表中
+
 ## 相关文件
 
 - `lib/auth/plugins/wechat/index.js` - Better Auth 服务端插件
@@ -323,4 +489,3 @@ const unbindResult = await authClient.unbindWechat();
 - `app/api/v1/pub/mp/get-scan-result/route.js` - 获取扫码结果 API
 - `app/api/v1/pub/mp/webhook/route.js` - 微信消息回调 API
 - `components/auth/wechat-login-dialog.js` - 微信登录对话框组件
-

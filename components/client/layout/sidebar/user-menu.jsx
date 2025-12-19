@@ -4,14 +4,21 @@
 import { useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Sparkles, UserCircle, CreditCard, Bell, LogOut } from 'lucide-react';
-import { signOutAction } from '@/app/(client)/actions/auth';
+import { authClient } from '@/lib/auth/auth-client';
 
 export function UserMenu({ user }) {
 	const router = useRouter();
 
+	// 使用客户端 signOut 同时清除客户端和服务端 session
 	const handleLogout = async () => {
-		const result = await signOutAction();
-		if (result.success) {
+		try {
+			// 使用 authClient.signOut() 同时清除客户端缓存和服务端 session
+			// 这样可以避免退出后因客户端缓存导致的重复跳转问题
+			await authClient.signOut();
+			router.push('/login');
+		} catch (error) {
+			console.error('Logout error:', error);
+			// 即使出错也尝试跳转到登录页
 			router.push('/login');
 		}
 	};

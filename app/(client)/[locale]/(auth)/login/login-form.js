@@ -23,7 +23,8 @@ export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClient
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
 	const hasHandledSessionRef = useRef(false);
-	const { data: session } = authClient.useSession();
+	// 获取 session 时同时获取 isPending 状态，用于判断是否正在加载
+	const { data: session, isPending } = authClient.useSession();
 
 	// 计算 OAuth 提供商状态
 	const hasOAuth = !nb.pubfn.isNullAll(GoogleClientID, GitHubClientID, WechatMPAppID);
@@ -48,11 +49,17 @@ export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClient
 		const safeCallback = formatRedirectPath(callbackUrl);
 		if (safeCallback) return safeCallback;
 		return `/dashboard`;
-	}, [callbackUrl, formatRedirectPath, locale]);
+	}, [callbackUrl, formatRedirectPath]);
 
 	// 检查是否有 session（三方登录回调后）并初始化用户
+	// 只有在 session 加载完成且确实有有效用户时才跳转
 	useEffect(() => {
-		if (session && !hasHandledSessionRef.current) {
+		// 如果正在加载，不做任何操作
+		if (isPending) return;
+		
+		// 只有当 session 存在且有 user 对象时才认为是有效登录
+		// 这避免了退出登录后客户端缓存导致的误判
+		if (session?.user && !hasHandledSessionRef.current) {
 			const initUser = async () => {
 				// 有 session，初始化用户并跳转
 				await checkAndInitUserAction();
@@ -61,7 +68,7 @@ export function LoginForm({ className, callbackUrl, GoogleClientID, GitHubClient
 			};
 			initUser();
 		}
-	}, [session, router, getRedirectUrl]);
+	}, [session, isPending, router, getRedirectUrl]);
 
 	const isEmailIdentifier = (value) => value.includes('@');
 
