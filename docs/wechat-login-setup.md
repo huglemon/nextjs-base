@@ -2,6 +2,16 @@
 
 本文档介绍如何配置微信公众号扫码登录功能。
 
+## 更新日志
+
+- **v1.1.0** (2025-12)
+  - 使用 `setSessionCookie` 替代手动设置 cookie，更符合 better-auth 规范
+  - 添加完整的 OpenAPI 元数据，支持 API 文档生成
+  - 添加 hooks 钩子处理登录后逻辑
+  - 使用 `mergeSchema` 优化 schema 扩展方式
+  - 新增 `unbindWechat` 解绑接口
+  - 支持 `onUserCreated` 和 `onSignIn` 回调函数
+
 ## 前置条件
 
 1. **已认证的微信服务号**（订阅号不支持带参二维码）
@@ -212,12 +222,97 @@ POST /api/v1/pub/mp/webhook  - 消息/事件接收
 
 > 💡 **建议**: 将公众号绑定到微信开放平台，这样可以获取 unionid，实现跨应用用户统一。
 
+### Q: 为什么获取不到用户的昵称和头像？
+
+⚠️ **重要说明**：自 2021 年 12 月 27 日起，微信调整了接口策略：
+
+- **通过后台接口（全局 `access_token`）获取用户信息时，不再返回昵称和头像等敏感信息**
+- 只有在用户通过**网页授权（OAuth2.0）**并明确同意授权的情况下，才能获取这些信息
+
+**当前实现**：
+- 扫码登录流程中，我们只能获取到 `openid` 和 `unionid`（如果已绑定开放平台）
+- 无法通过后台接口获取用户的昵称和头像
+- 这是微信官方的限制，不是代码问题
+
+**解决方案**（可选）：
+1. **接受现状**：使用 `openid`/`unionid` 进行登录，昵称和头像留空或使用默认值
+2. **使用网页授权**：引导用户进行网页授权流程获取用户信息（会增加用户操作步骤）
+
+> 💡 **建议**：对于扫码登录场景，建议采用方案 1，因为：
+> - 用户体验更好（无需额外授权步骤）
+> - 登录功能不受影响（使用 openid/unionid 即可完成登录）
+> - 如果确实需要用户信息，可以在用户首次登录后引导其完善资料
+
 ## 安全建议
 
 1. **保护 AppSecret**: 不要将 AppSecret 提交到代码仓库
 2. **使用安全模式**: 生产环境建议启用消息加解密
 3. **验证签名**: 所有微信请求都已验证签名，确保来源可信
 4. **限制 API 访问**: 考虑添加频率限制，防止滥用
+
+## 插件配置选项
+
+`wechatPlugin` 支持以下配置选项：
+
+```javascript
+import { wechatPlugin } from '@/lib/auth/plugins/wechat';
+
+wechatPlugin({
+  // 临时邮箱域名（用于微信用户占位邮箱）
+  emailDomainName: 'your-domain.com', // 默认: 'wechat.placeholder'
+
+  // 自定义 schema 扩展
+  schema: {
+    account: {
+      fields: {
+        // 自定义字段...
+      },
+    },
+  },
+
+  // 用户创建后的回调
+  onUserCreated: async ({ user, unionid, openid, ctx }) => {
+    console.log('New user created:', user.id);
+    // 可以在这里发送欢迎消息、初始化用户数据等
+  },
+
+  // 登录成功后的回调
+  onSignIn: async ({ user, session, isNewUser, ctx }) => {
+    console.log('User signed in:', user.id, 'isNew:', isNewUser);
+    // 可以在这里记录登录日志、发送通知等
+  },
+});
+```
+
+## 客户端 API
+
+客户端插件提供以下方法：
+
+```javascript
+import { authClient } from '@/lib/auth/auth-client';
+
+// 微信扫码登录
+const result = await authClient.signInWechat({
+  unionid: 'xxx',
+  openid: 'xxx',
+  nickname: '用户昵称', // 可选
+  avatar: 'https://...', // 可选
+});
+
+// 检查微信是否已绑定
+const { bound } = await authClient.checkWechatBinding({
+  unionid: 'xxx',
+});
+
+// 绑定微信到当前账户（需要已登录）
+const bindResult = await authClient.bindWechat({
+  unionid: 'xxx',
+  openid: 'xxx',
+});
+
+// 解绑当前账户的微信（需要已登录）
+const unbindResult = await authClient.unbindWechat();
+```
 
 ## 相关文件
 

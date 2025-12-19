@@ -123,38 +123,61 @@ async function handleMessage(message) {
 
 			// 只处理登录相关的扫码（以 login_ 开头）
 			if (sceneId && sceneId.startsWith('login_')) {
-				try {
-					// 获取用户信息
-					const userInfo = await getUserInfo(FromUserName);
-					console.log('[WeChat Webhook] User info:', userInfo);
+				// 尝试获取用户信息
+				// ⚠️ 注意：由于微信接口限制（2021-12-27后），即使 API 调用成功，
+				// 也可能无法获取到 nickname 和 headimgurl（需要通过网页授权）
+				const userInfo = await getUserInfo(FromUserName);
+				
+				let nickname = '';
+				let avatar = '';
+				let unionid = FromUserName; // 默认使用 openid 作为 unionid
 
-					// 保存扫码结果
-					saveScanResult(sceneId, {
-						unionid: userInfo.unionid || userInfo.openid, // 有些公众号没有 unionid
+				if (userInfo) {
+					// API 调用成功，尝试提取用户信息
+					nickname = userInfo.nickname || '';
+					avatar = userInfo.headimgurl || '';
+					unionid = userInfo.unionid || FromUserName; // 优先使用 unionid
+					
+					console.log('[WeChat Webhook] User info retrieved:', {
 						openid: userInfo.openid,
-						nickname: userInfo.nickname || '',
-						avatar: userInfo.headimgurl || '',
+						unionid,
+						hasNickname: !!nickname,
+						hasAvatar: !!avatar,
+						// 如果 nickname 和 avatar 为空，这是正常的（微信接口限制）
+						note: !nickname && !avatar ? 'Nickname/avatar not available due to WeChat API limitation' : '',
 					});
-
-					// 回复用户扫码成功消息
-					return buildXmlResponse({
-						ToUserName: FromUserName,
-						FromUserName: ToUserName,
-						CreateTime: Math.floor(Date.now() / 1000),
-						MsgType: 'text',
-						Content: '✅ 扫码成功！请返回网页完成登录。',
-					});
-				} catch (error) {
-					console.error('[WeChat Webhook] Handle scan error:', error);
-
-					return buildXmlResponse({
-						ToUserName: FromUserName,
-						FromUserName: ToUserName,
-						CreateTime: Math.floor(Date.now() / 1000),
-						MsgType: 'text',
-						Content: '❌ 登录失败，请稍后重试。',
-					});
+				} else {
+					// 无法获取用户信息（用户可能未关注公众号，或 API 调用失败）
+					console.warn('[WeChat Webhook] Unable to get user info for:', FromUserName);
+					console.warn('[WeChat Webhook] User may not be subscribed or API call failed');
 				}
+
+				const openid = FromUserName;
+
+				// 保存扫码结果（即使没有昵称和头像，也要保存 openid 和 unionid）
+				saveScanResult(sceneId, {
+					unionid: unionid,
+					openid: openid,
+					nickname: nickname,
+					avatar: avatar,
+				});
+
+				console.log('[WeChat Webhook] Scan result saved:', {
+					sceneId,
+					unionid,
+					openid,
+					hasNickname: !!nickname,
+					hasAvatar: !!avatar,
+				});
+
+				// 回复用户扫码成功消息
+				return buildXmlResponse({
+					ToUserName: FromUserName,
+					FromUserName: ToUserName,
+					CreateTime: Math.floor(Date.now() / 1000),
+					MsgType: 'text',
+					Content: '✅ 扫码成功！请返回网页完成登录。',
+				});
 			}
 
 			// 普通关注事件，发送欢迎消息
