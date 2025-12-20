@@ -180,7 +180,7 @@ export default function SmartCrudPage({
 
 	// 自动生成表格列（根据搜索表单展开状态）
 	const tableColumns = useMemo(() => {
-		const columns = generateTableColumns(fieldsConfig, { searchExpanded });
+		const columns = generateTableColumns(fieldsConfig, { searchExpanded, actions });
 		
 		// 如果启用序号列，添加到最前面
 		if (enableIndexColumn) {
@@ -203,7 +203,7 @@ export default function SmartCrudPage({
 		}
 		
 		return columns;
-	}, [fieldsConfig, searchExpanded, enableIndexColumn]);
+	}, [fieldsConfig, searchExpanded, enableIndexColumn, actions]);
 
 	// 自动生成搜索配置
 	const searchConfig = useMemo(() => {

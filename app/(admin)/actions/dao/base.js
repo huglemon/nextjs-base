@@ -302,7 +302,18 @@ export class BaseDAO {
 
 		// 否则使用 Prisma 原生查询
 		const where = this.buildWhere(params);
-		const orderBy = sortJson || this.config.query.defaultSort;
+		
+		// 处理排序：将对象格式转换为 Prisma 需要的格式
+		// 如果 sortJson 是数组，直接使用；如果是对象，需要判断字段数量
+		let orderBy = sortJson || this.config.query.defaultSort;
+		if (orderBy && !Array.isArray(orderBy) && typeof orderBy === 'object') {
+			const keys = Object.keys(orderBy);
+			// 如果只有一个字段，保持对象格式；多个字段则转换为数组格式
+			if (keys.length > 1) {
+				orderBy = keys.map(key => ({ [key]: orderBy[key] }));
+			}
+		}
+		
 		const skip = (pageIndex - 1) * pageSize;
 
 		const queryOptions = {
@@ -802,9 +813,19 @@ export class BaseDAO {
 		const finalWhere = { ...this.config.query.baseFilter, ...where };
 		if (this.config.softDelete) finalWhere.deletedAt = null;
 
+		// 处理排序：将对象格式转换为 Prisma 需要的格式
+		let finalOrderBy = orderBy || this.config.query.defaultSort;
+		if (finalOrderBy && !Array.isArray(finalOrderBy) && typeof finalOrderBy === 'object') {
+			const keys = Object.keys(finalOrderBy);
+			// 如果只有一个字段，保持对象格式；多个字段则转换为数组格式
+			if (keys.length > 1) {
+				finalOrderBy = keys.map(key => ({ [key]: finalOrderBy[key] }));
+			}
+		}
+
 		const records = await this.model.findMany({
 			where: finalWhere,
-			orderBy: orderBy || this.config.query.defaultSort,
+			orderBy: finalOrderBy,
 		});
 
 		const transform = this.config.transforms?.output;
