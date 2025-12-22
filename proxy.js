@@ -1,23 +1,23 @@
 /**
  * Next.js 16 Proxy - 统一拦截器
- * 
+ *
  * 功能：
  * 1. 多语言路由处理（next-intl）
  * 2. API 权限自动拦截
- * 
+ *
  * ## API 路径约定
- * 
+ *
  * | 路径 | 权限 | 说明 |
  * |------|------|------|
  * | /api/pub/* | 公开 | 无需登录 |
  * | /api/auth/* | 登录 | 需要登录 |
  * | /api/sys/* | 后台 | 需要后台权限 |
  * | /api/v1/pub/* | 公开 | 带版本号 |
- * 
+ *
  * ## 使用方式
- * 
+ *
  * 只需按目录结构创建 API，权限自动生效：
- * 
+ *
  * ```
  * app/api/pub/config/route.js      → 公开
  * app/api/auth/user/route.js       → 需要登录
@@ -30,17 +30,12 @@ import createIntlMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 import { auth } from '@/lib/auth/auth';
 
-// 多语言中间件
-const intlMiddleware = createIntlMiddleware({
-	locales,
-	defaultLocale,
-	localeDetection: true,
-	localePrefix: 'always',
-});
+// 多语言中间件（使用统一的 routing 配置）
+const intlMiddleware = createIntlMiddleware(routing);
 
 /**
  * 从路径解析权限级别
- * 
+ *
  * 支持任意层级，从最后一级向前查找：
  * - /api/pub/xxx          → public
  * - /api/user/pub/xxx     → public
@@ -48,7 +43,7 @@ const intlMiddleware = createIntlMiddleware({
  * - /api/v1/user/auth/xxx → auth
  * - /api/sys/xxx          → system
  * - /api/user/sys/admin   → system
- * 
+ *
  * 优先级：最后一级 > 前面的层级
  */
 function getApiPermissionLevel(pathname) {
@@ -59,39 +54,42 @@ function getApiPermissionLevel(pathname) {
 	}
 
 	// 提取路径段（去掉 /api 前缀）
-	const segments = pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
-	
+	const segments = pathname
+		.replace(/^\/api\/?/, '')
+		.split('/')
+		.filter(Boolean);
+
 	// 从最后一级向前查找权限关键词
 	for (let i = segments.length - 1; i >= 0; i--) {
 		const segment = segments[i].toLowerCase();
-		
+
 		// 跳过版本号 v1, v2 等
 		if (/^v\d+$/.test(segment)) {
 			continue;
 		}
-		
+
 		// 检查权限关键词（使用与 permission-naming.js 相同的规则）
 		// pub 开头但不是 publish/publisher 等
 		if (/^pub(?![l])/.test(segment)) {
 			return 'public';
 		}
-		
+
 		// auth 开头但不是 author/authenticate 等
 		if (/^auth(?![oe])/.test(segment)) {
 			return 'auth';
 		}
-		
+
 		// sys 开头但不是 system 等
 		if (/^sys(?![t])/.test(segment)) {
 			return 'system';
 		}
-		
+
 		// admin
 		if (segment === 'admin') {
 			return 'system';
 		}
 	}
-	
+
 	// 默认需要登录
 	return 'auth';
 }
@@ -120,10 +118,7 @@ export default async function proxy(request) {
 			});
 
 			if (!session?.user) {
-				return NextResponse.json(
-					{ success: false, error: 'Unauthorized: Please login first' },
-					{ status: 401 }
-				);
+				return NextResponse.json({ success: false, error: 'Unauthorized: Please login first' }, { status: 401 });
 			}
 
 			// 后台权限检查
@@ -138,41 +133,26 @@ export default async function proxy(request) {
 					// 非 admin 但有后台权限，需要检查 RBAC
 					try {
 						const { checkUserHasApiPermission } = await import('@/app/(admin)/actions/dao/sys.js');
-						
+
 						// 检查 API 权限（支持 METHOD:PATH 和 PATH 两种格式）
 						const method = request.method;
-						const hasMethodPermission = await checkUserHasApiPermission(
-							session.user.id,
-							`${method}:${pathname}`
-						);
-						
+						const hasMethodPermission = await checkUserHasApiPermission(session.user.id, `${method}:${pathname}`);
+
 						if (!hasMethodPermission) {
 							// 再尝试不带方法的路径
-							const hasPathPermission = await checkUserHasApiPermission(
-								session.user.id,
-								pathname
-							);
-							
+							const hasPathPermission = await checkUserHasApiPermission(session.user.id, pathname);
+
 							if (!hasPathPermission) {
-								return NextResponse.json(
-									{ success: false, error: `Forbidden: API '${pathname}' not allowed` },
-									{ status: 403 }
-								);
+								return NextResponse.json({ success: false, error: `Forbidden: API '${pathname}' not allowed` }, { status: 403 });
 							}
 						}
 					} catch (error) {
 						console.error('[Proxy] RBAC check error:', error);
-						return NextResponse.json(
-							{ success: false, error: 'Permission check failed' },
-							{ status: 500 }
-						);
+						return NextResponse.json({ success: false, error: 'Permission check failed' }, { status: 500 });
 					}
 				} else {
 					// 既不是 admin 也没有后台权限
-					return NextResponse.json(
-						{ success: false, error: 'Forbidden: Backend access required' },
-						{ status: 403 }
-					);
+					return NextResponse.json({ success: false, error: 'Forbidden: Backend access required' }, { status: 403 });
 				}
 			}
 
@@ -189,10 +169,7 @@ export default async function proxy(request) {
 			});
 		} catch (error) {
 			console.error('[Proxy] Auth error:', error);
-			return NextResponse.json(
-				{ success: false, error: 'Authentication failed' },
-				{ status: 401 }
-			);
+			return NextResponse.json({ success: false, error: 'Authentication failed' }, { status: 401 });
 		}
 	}
 
