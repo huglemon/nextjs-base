@@ -27,7 +27,7 @@
 
 import { NextResponse } from 'next/server';
 import createIntlMiddleware from 'next-intl/middleware';
-import { locales, defaultLocale } from './i18n/config';
+import { routing } from './i18n/routing';
 import { auth } from '@/lib/auth/auth';
 
 // 多语言中间件
