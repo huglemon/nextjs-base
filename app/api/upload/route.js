@@ -28,7 +28,7 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth';
-import { uploadFile, uploadFiles, deleteFile, checkR2Config } from '@/lib/upload';
+import { uploadFile, uploadFiles, deleteFile, checkStorageConfig, getStorageMode } from '@/lib/upload';
 import { checkUploadRateLimit } from '@/lib/upload/upload-guard';
 
 // ========== 日志配置 ==========
@@ -156,14 +156,14 @@ export async function POST(request) {
 			);
 		}
 		
-		// 3. 检查 R2 配置
-		const r2Config = checkR2Config();
-		if (!r2Config.configured) {
-			logParams = { userId, error: 'R2 not configured' };
+		// 3. 检查存储配置
+		const storageConfig = checkStorageConfig();
+		if (!storageConfig.configured) {
+			logParams = { userId, error: `Storage (${storageConfig.provider}) not configured` };
 			logUploadStart(action, logParams);
-			logUploadEnd(action, { error: r2Config.error }, Date.now() - startTime, true);
+			logUploadEnd(action, { error: storageConfig.error }, Date.now() - startTime, true);
 			return NextResponse.json(
-				{ success: false, error: 'Upload service not configured. ' + r2Config.error },
+				{ success: false, error: 'Upload service not configured. ' + storageConfig.error },
 				{ status: 500 }
 			);
 		}
@@ -314,10 +314,11 @@ export async function POST(request) {
  * 获取上传配置信息（公开接口）
  */
 export async function GET() {
-	const r2Config = checkR2Config();
+	const storageConfig = checkStorageConfig();
 	
 	return NextResponse.json({
-		configured: r2Config.configured,
+		configured: storageConfig.configured,
+		provider: getStorageMode(),
 		types: {
 			image: {
 				description: 'Single image upload',

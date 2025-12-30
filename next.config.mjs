@@ -21,6 +21,11 @@ const nextConfig = {
 				pathname: '/**',
 			},
 			{
+				protocol: 'http',
+				hostname: 'r2.hb-bkt.clouddn.com.com',
+				pathname: '/**',
+			},
+			{
 				protocol: 'https',
 				hostname: 'lh3.googleusercontent.com',
 				pathname: '/**',
